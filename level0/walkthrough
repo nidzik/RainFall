@@ -1,0 +1,12 @@
+gdb > pdisass main
+...
+   0x08048ed4 <+20>:	call   0x8049710 <atoi>
+   0x08048ed9 <+25>:	cmp    $0x1a7,%eax
+...
+
+0x1a7 = 423
+
+./level0 423
+$ cat /home/user/level1/.pass
+
+

