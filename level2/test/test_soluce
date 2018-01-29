@@ -1,0 +1,5 @@
+gdb 
+$ p system 
+<text variable, no debug info>} 0xb7e6b060 <system>
+
+ 
