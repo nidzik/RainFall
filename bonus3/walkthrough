@@ -1,0 +1,6 @@
+bonus3@RainFall:~$ ./bonus3
+bonus3@RainFall:~$ ./bonus3 aa
+
+bonus3@RainFall:~$ ./bonus3 ""
+$ id
+uid=2013(bonus3) gid=2013(bonus3) euid=2014(end) egid=100(users) groups=2014(end),100(users),2013(bonus3)
