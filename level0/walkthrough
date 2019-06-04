@@ -1,12 +1,15 @@
-gdb > pdisass main
+Open ./level0 with gdb
+
+$ disas main
 ...
-   0x08048ed4 <+20>:	call   0x8049710 <atoi>
-   0x08048ed9 <+25>:	cmp    $0x1a7,%eax
+0x08048ed4 <+20>:	call   0x8049710 <atoi>
+0x08048ed9 <+25>:	cmp    eax, 0x1a7
+0x08048ede <+30>:	jne    0x8048f58 <main+152>
 ...
 
-0x1a7 = 423
+This shows that the value returned by atoi is compared to 0x1a7 (423).
+All we need to do is run the program with 423.
 
-./level0 423
-$ cat /home/user/level1/.pass
-
-
+$ ./level0 423
+cd /home/user/level1
+cat .pass

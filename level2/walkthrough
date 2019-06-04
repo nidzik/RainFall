@@ -1,24 +1,24 @@
-see the exp.py..
+The <main> function makes a call to <p> function.
 
+$ (gdb) disas main
+...
+0x08048545 <+6>:	call   0x80484d4 <p>
+...
 
-(gdb) define hook-stop
-Type commands for definition of "hook-stop".
-End with a line saying just "end".
->x/1i $eip
->x/8wx $esp
->end
+The <p> function makes a call to <gets> which means we can overflow the buffer.
 
-cant ret to the stack bc of cmp 0xb000000
-so we ret to the end of the fct itself : 
-$ gdb disass p 
- last intruction ret : 0x0804853e
- 
-then smash the next add(eip) with the stack add
-$ b *0x0804853e 
-$ info  register 
-esp = 0xbffff740
+$ (gdb) disas p
+...
+0x080484ed <+25>:	call   0x80483c0 <gets@plt>
+...
 
-there are no more checks here 
+The idea is to insert ou shellcode to spawn a shell but, this comparison prevents our shellcode to be accessed
+directly at an address matching 0xb0000000 pattern.
 
-slide into nops (0xbffff740+30)  then put the shellcode
- 
+0x080484fb <+39>:	and    eax, 0xb0000000
+0x08048500 <+44>:	cmp    eax, 0xb0000000
+
+So first we need to pass this check, and then jump back to where we want.
+Then we overwrite the $eip with the return address of <p> function.
+It will cause the program to loop back on ret, pop this address off the stack and then move up to the next address on the stack.
+It will look something like : <80 bytes of garbage> + <return address> + <shellcode address> + <nopsled> + <shellcode>

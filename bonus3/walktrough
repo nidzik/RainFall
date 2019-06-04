@@ -1,0 +1,10 @@
+The interesting thing about this program are these instructions :
+
+buf[atoi(argv[1])] = '\0';
+if (strcmp(buf, argv[1]) == 0)
+	execl("/bin/sh", "sh", 0);
+
+It simply means that is we pass "nothing" to the program, the first byte of buf will be set to null and it will compare "nothing" with "nothing".
+We just have to do like so :
+
+$ ./bonus3 ""

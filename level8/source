@@ -1,0 +1,64 @@
+static char* service ;
+static char* auth ;
+char buf[] ;
+
+int al;
+int dl;
+
+printf("(%p) (%p)", service, auth);
+
+if ( fgets(buf,128,stdin) != 0)
+
+int cx = 5 ;
+char au = "auth";
+
+while (cx > 0 && *buf == *au ) (if buf = "auth")
+{
+	buf++;
+	au++;
+	cx--;
+}
+if (buf > 30)
+	strcpy(auth, buf+5);
+else
+
+cx = 5;
+char re = "reset";
+
+while (cx > 0 && *buf == *re ) (if buf == "reset")
+{
+        buf++;
+        au++;
+        cx--;
+}
+	free(auth);
+
+
+cx = 6;
+char se = "service";
+
+while (cx > 0 && *buf == se ) (if buf == "service")
+{
+        buf++;
+        au++;
+        cx--;
+}
+
+service = ft_strdup(buf+7);
+
+cx = 5;
+char lo = "login";
+
+while (cx > 0 && *buf == lo ) (if buf == "login")
+{
+        buf++;
+        au++;
+        cx--;
+}
+
+
+if (*auth+30 != '\0' )
+system MOFO
+
+else go to main+5
+
